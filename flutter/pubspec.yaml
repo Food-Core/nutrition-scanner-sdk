@@ -1,0 +1,10 @@
+name: nutrition_scanner
+description: Nutrition label scanning — manual and stability-gated auto capture.
+version: 0.1.0
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  http: ^1.2.0
+  # Auto capture integrates with (but does not require) the camera package:
+  # camera: ^0.11.0

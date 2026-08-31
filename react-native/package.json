@@ -1,0 +1,14 @@
+{
+  "name": "@food-core/nutrition-scanner",
+  "version": "0.1.0",
+  "description": "Nutrition label scanning for React Native / Expo — manual and auto capture",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "peerDependencies": {
+    "expo-sensors": ">=12",
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "expo-sensors": { "optional": true }
+  }
+}
