@@ -81,7 +81,7 @@ class ScannerOverlayView @JvmOverloads constructor(
         }
     }
 
-    private val scanAnimator = ValueAnimator.ofFloat(0.08f, 0.9f).apply {
+    private val scanAnimator = ValueAnimator.ofFloat(0.14f, 0.86f).apply {
         duration = 2200
         repeatMode = ValueAnimator.REVERSE
         repeatCount = ValueAnimator.INFINITE
@@ -127,8 +127,8 @@ class ScannerOverlayView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         if (showBrackets) {
-            val insetX = w * 0.06f
-            val insetY = h * 0.06f
+            val insetX = w * 0.12f
+            val insetY = h * 0.12f
             val arm = minOf(w, h) * 0.09f
             fun corner(x: Float, y: Float, dx: Float, dy: Float) {
                 canvas.drawLine(x, y, x + arm * dx, y, bracketPaint)
@@ -141,7 +141,7 @@ class ScannerOverlayView @JvmOverloads constructor(
         }
         if (analyzing) {
             val y = h * scanY
-            canvas.drawLine(w * 0.08f, y, w * 0.92f, y, linePaint)
+            canvas.drawLine(w * 0.14f, y, w * 0.86f, y, linePaint)
         }
     }
 }

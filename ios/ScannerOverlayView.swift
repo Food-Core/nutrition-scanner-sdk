@@ -87,8 +87,8 @@ public final class ScannerOverlayView: UIView {
         if on {
             statusLabel.text = analyzingText
             let animation = CABasicAnimation(keyPath: "position.y")
-            animation.fromValue = bounds.height * 0.08
-            animation.toValue = bounds.height * 0.9
+            animation.fromValue = bounds.height * 0.14
+            animation.toValue = bounds.height * 0.86
             animation.duration = 2.2
             animation.autoreverses = true
             animation.repeatCount = .infinity
@@ -124,7 +124,7 @@ public final class ScannerOverlayView: UIView {
         let w = bounds.width
         let h = bounds.height
 
-        scanLine.frame = CGRect(x: w * 0.08, y: h * 0.08, width: w * 0.84, height: 2)
+        scanLine.frame = CGRect(x: w * 0.14, y: h * 0.14, width: w * 0.72, height: 2)
         statusLabel.frame = CGRect(x: 16, y: h - h * 0.04 - 44, width: w - 32, height: 44)
         flashButton.frame = CGRect(x: w - 52, y: 10, width: 42, height: 42)
         flashButton.isHidden = !showsFlashButton
@@ -133,8 +133,8 @@ public final class ScannerOverlayView: UIView {
             bracketLayer.path = nil
             return
         }
-        let insetX = w * 0.06
-        let insetY = h * 0.06
+        let insetX = w * 0.12
+        let insetY = h * 0.12
         let arm = min(w, h) * 0.09
         let path = UIBezierPath()
         func corner(_ x: CGFloat, _ y: CGFloat, _ dx: CGFloat, _ dy: CGFloat) {

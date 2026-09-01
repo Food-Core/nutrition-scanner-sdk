@@ -126,15 +126,15 @@ const OVERLAY_CSS = `
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
 .nls-corner{position:absolute;width:min(36px,10%);height:min(36px,10%);
   border:0 solid rgba(255,255,255,.92);border-radius:2px;}
-.nls-tl{top:6%;left:6%;border-top-width:3px;border-left-width:3px;}
-.nls-tr{top:6%;right:6%;border-top-width:3px;border-right-width:3px;}
-.nls-bl{bottom:6%;left:6%;border-bottom-width:3px;border-left-width:3px;}
-.nls-br{bottom:6%;right:6%;border-bottom-width:3px;border-right-width:3px;}
-.nls-scanline{position:absolute;left:8%;right:8%;height:2px;top:8%;display:none;
+.nls-tl{top:12%;left:12%;border-top-width:3px;border-left-width:3px;}
+.nls-tr{top:12%;right:12%;border-top-width:3px;border-right-width:3px;}
+.nls-bl{bottom:12%;left:12%;border-bottom-width:3px;border-left-width:3px;}
+.nls-br{bottom:12%;right:12%;border-bottom-width:3px;border-right-width:3px;}
+.nls-scanline{position:absolute;left:14%;right:14%;height:2px;top:14%;display:none;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
   box-shadow:0 0 8px rgba(255,255,255,.7);
   animation:nls-scan 2.2s ease-in-out infinite alternate;}
-@keyframes nls-scan{from{top:8%}to{top:calc(92% - 2px)}}
+@keyframes nls-scan{from{top:14%}to{top:calc(86% - 2px)}}
 .nls-status{position:absolute;bottom:4%;left:4%;right:4%;text-align:center;
   color:#fff;font-size:15px;line-height:1.35;
   text-shadow:0 1px 4px rgba(0,0,0,.85);}

@@ -81,9 +81,9 @@ class _ScannerOverlayState extends State<ScannerOverlay>
             AnimatedBuilder(
               animation: _controller,
               builder: (context, _) => Positioned(
-                left: constraints.maxWidth * 0.08,
-                right: constraints.maxWidth * 0.08,
-                top: h * 0.08 + (h * 0.82) * _controller.value,
+                left: constraints.maxWidth * 0.14,
+                right: constraints.maxWidth * 0.14,
+                top: h * 0.14 + (h * 0.72) * _controller.value,
                 child: Container(
                   height: 2,
                   decoration: BoxDecoration(
@@ -150,7 +150,7 @@ class _BracketPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    final inset = Offset(size.width * 0.06, size.height * 0.06);
+    final inset = Offset(size.width * 0.12, size.height * 0.12);
     final arm = size.shortestSide * 0.09;
 
     void corner(Offset origin, double dx, double dy) {

@@ -56,7 +56,7 @@ export function ScannerOverlay({
 
   const translateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [height * 0.08, height * 0.9],
+    outputRange: [height * 0.14, height * 0.86],
   });
 
   return (
@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.92)",
     borderRadius: 2,
   },
-  tl: { top: "6%", left: "6%", borderTopWidth: 3, borderLeftWidth: 3 },
-  tr: { top: "6%", right: "6%", borderTopWidth: 3, borderRightWidth: 3 },
-  bl: { bottom: "6%", left: "6%", borderBottomWidth: 3, borderLeftWidth: 3 },
-  br: { bottom: "6%", right: "6%", borderBottomWidth: 3, borderRightWidth: 3 },
+  tl: { top: "12%", left: "12%", borderTopWidth: 3, borderLeftWidth: 3 },
+  tr: { top: "12%", right: "12%", borderTopWidth: 3, borderRightWidth: 3 },
+  bl: { bottom: "12%", left: "12%", borderBottomWidth: 3, borderLeftWidth: 3 },
+  br: { bottom: "12%", right: "12%", borderBottomWidth: 3, borderRightWidth: 3 },
   scanline: {
     position: "absolute",
-    left: "8%",
-    right: "8%",
+    left: "14%",
+    right: "14%",
     height: 2,
     backgroundColor: "rgba(255,255,255,0.95)",
     shadowColor: "#fff",
