@@ -80,6 +80,141 @@ bar is adaptive (`motionStable = 10` floor, `motionCeil = 25` cap — see the
 `sampleEvery`. Recommended UX: freeze the preview on the captured photo
 while scanning so the user knows they can move.
 
+## Complete scan screen (copy-paste)
+
+Camera preview that auto-captures when steady and returns a `ScanResult` —
+overlay, freeze-frame, flash, and retry flow included:
+
+```dart
+import 'dart:io';
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:nutrition_scanner/nutrition_scanner.dart';
+import 'package:nutrition_scanner/scanner_overlay.dart';
+
+class ScanScreen extends StatefulWidget {
+  const ScanScreen({super.key, required this.onResult});
+
+  /// Called once with the successful scan; pop the screen or show results.
+  final void Function(ScanResult result) onResult;
+
+  @override
+  State<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends State<ScanScreen> {
+  final scanner = NutritionScannerClient(apiKey: 'nls_...');
+  CameraController? camera;
+  late final AutoCaptureDetector detector = AutoCaptureDetector(
+    onStatus: (msg) => setState(() => status = msg),
+    onTrigger: _captureAndScan,
+  );
+
+  String status = '';
+  bool analyzing = false;
+  bool flashOn = false;
+  File? frozenFrame; // captured still shown while analyzing
+
+  @override
+  void initState() {
+    super.initState();
+    _openCamera();
+  }
+
+  Future<void> _openCamera() async {
+    final cameras = await availableCameras();
+    final back = cameras.firstWhere(
+      (c) => c.lensDirection == CameraLensDirection.back,
+      orElse: () => cameras.first,
+    );
+    camera = CameraController(
+      back,
+      ResolutionPreset.high,
+      enableAudio: false,
+      // yuv420 on BOTH platforms so frame.planes[0] is the luma plane the
+      // detector expects (iOS would otherwise default to BGRA).
+      imageFormatGroup: ImageFormatGroup.yuv420,
+    );
+    await camera!.initialize();
+    await camera!.startImageStream(_feedDetector);
+    if (mounted) setState(() {});
+  }
+
+  void _feedDetector(CameraImage frame) => detector.addFrame(
+        frame.planes[0].bytes,
+        frame.width,
+        frame.height,
+        frame.planes[0].bytesPerRow,
+      );
+
+  Future<void> _captureAndScan() async {
+    final cam = camera;
+    if (cam == null) return;
+    try {
+      await cam.stopImageStream();
+      final photo = await cam.takePicture();
+      setState(() {
+        frozenFrame = File(photo.path); // freeze: user can move their hand
+        analyzing = true;
+      });
+      final result = await scanner.scanPath(photo.path);
+      if (!mounted) return;
+      if (result.foundTable) {
+        widget.onResult(result);
+        return;
+      }
+      await _resumePreview(); // nothing found — wait for a reposition
+      detector.rearmAfterEmptyResult();
+    } on ScanException catch (e) {
+      if (!mounted) return;
+      await _resumePreview();
+      detector.rearmAfterEmptyResult();
+      setState(() => status = e.message);
+    }
+  }
+
+  Future<void> _resumePreview() async {
+    setState(() {
+      analyzing = false;
+      frozenFrame = null;
+    });
+    await camera?.startImageStream(_feedDetector);
+  }
+
+  @override
+  void dispose() {
+    camera?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cam = camera;
+    if (cam == null || !cam.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Stack(fit: StackFit.expand, children: [
+      CameraPreview(cam),
+      if (frozenFrame != null) Image.file(frozenFrame!, fit: BoxFit.cover),
+      ScannerOverlay(
+        analyzing: analyzing,
+        status: status,
+        flashOn: flashOn,
+        onToggleFlash: () async {
+          flashOn = !flashOn;
+          await cam.setFlashMode(flashOn ? FlashMode.torch : FlashMode.off);
+          setState(() {});
+        },
+      ),
+    ]);
+  }
+}
+```
+
+Use it: `ScanScreen(onResult: (r) => Navigator.pop(context, r))`.
+Don't forget `NSCameraUsageDescription` in Info.plist (iOS); the camera
+plugin needs `minSdkVersion 21` on Android.
+
 ## Viewfinder overlay
 
 `ScannerOverlay` (in `lib/scanner_overlay.dart`) stacks the standard scanner
