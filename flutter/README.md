@@ -22,18 +22,24 @@ import 'package:nutrition_scanner/nutrition_scanner.dart';
 
 final scanner = NutritionScannerClient(apiKey: 'nls_...');
 
-final result = await scanner.scanFile(File(photo.path));
+// From camera / image_picker (XFile.path), a File, or raw bytes:
+final result = await scanner.scanPath(photo.path);
+// ... or scanner.scanFile(File(...)) / scanner.scanBytes(Uint8List)
+
 if (result.foundTable) {
-  final kcal = result.nutriments['energy_kcal_100g'];
-  print('${kcal?.value} ${kcal?.unit}');   // 449.0 kcal
+  print(result.energyKcal100g?.value);   // 449.0 — typed getters for common
+  print(result.proteins100g?.unit);      // 'g'     nutrients, or use
+  print(result.nutriments['sugars_serving']); //     the full map by key
 } else {
   // Normal outcome for a photo without a nutrition table — retake.
 }
 ```
 
-Also available: `scanBytes(Uint8List)`. Errors throw `ScanException` with
-`.status` (see [../README.md](../README.md#api-contract)). Keep uploads at
-1200–2000 px on the long side.
+All public types (`ScanResult`, `Nutriment`, `ScanEntity`, `ScanException`,
+`AutoCaptureDetector`, `ScannerOverlay`) carry full dartdoc — hover any
+symbol in your IDE for field meanings, value ranges, and error semantics.
+Errors throw `ScanException` with `.status` and an `.isRetryable` helper.
+Keep uploads at 1200–2000 px on the long side.
 
 ## Auto capture
 
