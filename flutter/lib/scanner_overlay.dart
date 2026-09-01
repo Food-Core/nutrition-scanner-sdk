@@ -87,10 +87,10 @@ class _ScannerOverlayState extends State<ScannerOverlay>
                 child: Container(
                   height: 2,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
+                    color: Colors.white.withValues(alpha: 0.95),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         blurRadius: 8,
                       ),
                     ],
@@ -119,8 +119,8 @@ class _ScannerOverlayState extends State<ScannerOverlay>
               right: 10,
               child: Material(
                 color: widget.flashOn
-                    ? Colors.white.withOpacity(0.92)
-                    : Colors.black.withOpacity(0.45),
+                    ? Colors.white.withValues(alpha: 0.92)
+                    : Colors.black.withValues(alpha: 0.45),
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: Icon(
@@ -145,7 +145,7 @@ class _BracketPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.92)
+      ..color = Colors.white.withValues(alpha: 0.92)
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
