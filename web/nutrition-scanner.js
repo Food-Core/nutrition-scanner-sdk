@@ -30,17 +30,25 @@ export class NutritionScanner {
    *        email-verified user. Called with `true` when the SDK retries a
    *        401/403 (stale claims) — pass it through to getIdToken(force).
    * @param {string} [options.baseUrl]
+   * @param {Object|(() => Object)} [options.extraHeaders]  Additional request
+   *        headers (object, or a function evaluated per request) — e.g.
+   *        {"X-Scan-Cache": "0"} to bypass server-side result caching.
    */
-  constructor({ apiKey, getToken, baseUrl = DEFAULT_BASE_URL } = {}) {
+  constructor({ apiKey, getToken, baseUrl = DEFAULT_BASE_URL, extraHeaders } = {}) {
     if (!apiKey && !getToken) throw new Error("Provide apiKey or getToken.");
     this.apiKey = apiKey;
     this.getToken = getToken;
     this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.extraHeaders = extraHeaders;
   }
 
   async _headers(forceRefresh = false) {
-    if (this.apiKey) return { "X-API-Key": this.apiKey };
-    return { Authorization: `Bearer ${await this.getToken(forceRefresh)}` };
+    const extra =
+      typeof this.extraHeaders === "function"
+        ? this.extraHeaders()
+        : this.extraHeaders || {};
+    if (this.apiKey) return { "X-API-Key": this.apiKey, ...extra };
+    return { Authorization: `Bearer ${await this.getToken(forceRefresh)}`, ...extra };
   }
 
   /**
