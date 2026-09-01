@@ -35,6 +35,9 @@ data class ScanResult(
     val nutriments: Map<String, Nutriment>,
     val entityCount: Int,
     val wordsDetected: Int,
+    /** True when served from the server-side result cache (an identical
+     *  label was scanned before). Values match a fresh scan; latency ~1 s. */
+    val cached: Boolean,
     val rawJson: JSONObject,
 ) {
     val foundTable get() = entityCount > 0
@@ -103,6 +106,7 @@ class NutritionScannerClient(
                 nutriments = nutriments,
                 entityCount = json.optJSONArray("entities")?.length() ?: 0,
                 wordsDetected = json.optInt("words_detected"),
+                cached = json.optBoolean("cached", false),
                 rawJson = json,
             )
         }

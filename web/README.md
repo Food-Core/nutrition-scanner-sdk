@@ -103,8 +103,8 @@ shutter (returns a JPEG Blob without scanning).
 
 | Export | Description |
 |---|---|
-| `NutritionScanner({apiKey, getToken, baseUrl})` | API client |
-| `scanner.scan(blob) → Promise<Result>` | One extraction call |
+| `NutritionScanner({apiKey, getToken, baseUrl, extraHeaders})` | API client (`extraHeaders`: object or per-request function) |
+| `scanner.scan(blob) → Promise<Result>` | One extraction call; result may carry `cached: true` |
 | `AutoCapture(video, scanner, opts)` | Stability-gated capture controller |
 | `auto.start() / auto.stop()` | Camera lifecycle |
 | `ScanError` | Error with `.status` |

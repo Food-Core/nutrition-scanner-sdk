@@ -91,10 +91,20 @@ Response `200`:
 ```
 
 `nutriments` keys follow `<nutrient>_(100g|serving)`, plus `serving_size`.
-Detected nutrients include energy (kJ/kcal), fat, saturated fat,
-carbohydrates, sugars, proteins, salt and more — per 100g and per serving,
+The complete nutrient vocabulary: energy (kJ and kcal), fat, saturated fat,
+trans fat, cholesterol, carbohydrates, sugars, added sugars, fiber, proteins,
+salt, sodium, calcium, iron, potassium, vitamin D — per 100g and per serving,
 whichever the label prints. An image with **no nutrition table** returns
 `entities: []`; treat that as "reposition and retry", not an error.
+
+Notes on values:
+
+- Responses may include `"cached": true` — the extraction was served from the
+  server-side result cache (an identical label was scanned before). Values
+  are identical to a fresh scan; latency is ~1 s. Whether caching applies is
+  controlled **per API key** in the web app's settings.
+- "less than" amounts (e.g. `<1g`) parse to the printed bound
+  (`value: 1.0`) with the raw `text` (`"< 1g"`) preserving the qualifier.
 
 Errors:
 

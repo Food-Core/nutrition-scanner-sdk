@@ -56,7 +56,8 @@ export class NutritionScanner {
    * (bakes EXIF rotation, shrinks upload); otherwise sends original bytes.
    * Retries once with a force-refreshed token on 401/403 (stale user claims).
    * @param {Blob|File} image
-   * @returns {Promise<{entities: Array, nutriments: Object, words_detected: number}>}
+   * @returns {Promise<{entities: Array, nutriments: Object, words_detected: number, cached?: boolean}>}
+   *          `cached: true` = served from the server-side result cache.
    */
   async scan(image) {
     const blob = await normalizeImage(image);

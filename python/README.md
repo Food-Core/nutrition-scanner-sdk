@@ -26,6 +26,10 @@ else:
     print("No nutrition table found in this image.")
 ```
 
+Responses may include `"cached": true` — served from the server-side
+result cache (identical label scanned before); values match a fresh scan.
+Caching is controlled per API key in the web app's settings.
+
 Errors raise `ScanError` with `.status` and `.detail`
 (401 bad/revoked key, 400 undecodable image, 5xx transient — retry with
 backoff). `scanner.health()` returns the service health.

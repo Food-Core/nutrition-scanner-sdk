@@ -22,6 +22,9 @@ export interface ScanResult {
   entities: { label: string; text: string; score: number }[];
   nutriments: Record<string, Nutriment>;
   words_detected: number;
+  /** True when served from the server-side result cache (an identical label
+   *  was scanned before). Values match a fresh scan; latency ~1 s. */
+  cached?: boolean;
 }
 
 export class ScanError extends Error {

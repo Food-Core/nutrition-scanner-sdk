@@ -79,6 +79,8 @@ class Nutriment {
 
   /// The parsed numeric value, e.g. `449.0` for `'449kcal'`. `null` when the
   /// text could not be parsed into a number (rare — show [text] instead).
+  /// "Less than" amounts (`<1g`) parse to the printed bound (`1.0`); check
+  /// [text] to preserve the qualifier.
   final double? value;
 
   /// The parsed unit: `'kcal'`, `'kj'`, `'g'`, `'mg'`, `'µg'` or `'%'`.
@@ -140,6 +142,11 @@ class ScanResult {
   /// diagnostics (a sharp label photo typically yields 50+).
   final int wordsDetected;
 
+  /// True when served from the server-side result cache (an identical label
+  /// was scanned before). Values match a fresh scan; latency ~1 s. Caching
+  /// is controlled per API key in the web app's settings.
+  final bool cached;
+
   ScanResult.fromJson(Map<String, dynamic> json)
       : entities = ((json['entities'] as List?) ?? const [])
             .map((e) => ScanEntity.fromJson(e as Map<String, dynamic>))
@@ -147,7 +154,8 @@ class ScanResult {
         nutriments = (json['nutriments'] as Map<String, dynamic>? ?? const {})
             .map((k, v) =>
                 MapEntry(k, Nutriment.fromJson(v as Map<String, dynamic>))),
-        wordsDetected = json['words_detected'] as int? ?? 0;
+        wordsDetected = json['words_detected'] as int? ?? 0,
+        cached = json['cached'] as bool? ?? false;
 
   /// True when the image contained a readable nutrition table. False means
   /// "reposition and retake" — not a failure.

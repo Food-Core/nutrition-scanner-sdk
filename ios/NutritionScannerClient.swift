@@ -31,10 +31,14 @@ public struct ScanResult: Decodable {
     public let nutriments: [String: Nutriment]
     public let wordsDetected: Int
 
+    /// True when served from the server-side result cache (an identical
+    /// label was scanned before). Values match a fresh scan; latency ~1 s.
+    public let cached: Bool?
+
     public var foundTable: Bool { !entities.isEmpty }
 
     enum CodingKeys: String, CodingKey {
-        case entities, nutriments
+        case entities, nutriments, cached
         case wordsDetected = "words_detected"
     }
 }
