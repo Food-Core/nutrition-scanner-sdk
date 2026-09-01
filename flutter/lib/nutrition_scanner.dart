@@ -16,6 +16,9 @@
 /// viewfinder UI. See the package README for the full wiring example.
 library nutrition_scanner;
 
+export 'nutrition_scanner_widget.dart';
+export 'scanner_overlay.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
