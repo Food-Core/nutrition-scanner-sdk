@@ -140,8 +140,9 @@ const OVERLAY_CSS = `
   text-shadow:0 1px 4px rgba(0,0,0,.85);}
 .nls-flash{position:absolute;top:10px;right:10px;pointer-events:auto;
   width:42px;height:42px;border:none;border-radius:50%;cursor:pointer;
-  background:rgba(0,0,0,.45);color:#fff;font-size:19px;display:none;}
-.nls-flash[aria-pressed="true"]{background:rgba(255,255,255,.92);color:#111;}
+  background:#000;display:none;align-items:center;justify-content:center;}
+.nls-flash svg{fill:#fff;display:block;margin:auto;}
+.nls-flash[aria-pressed="true"] svg{fill:#ffd60a;}
 `;
 
 export class AutoCapture {
@@ -277,13 +278,15 @@ export class AutoCapture {
       this._flashBtn = document.createElement("button");
       this._flashBtn.className = "nls-flash";
       this._flashBtn.type = "button";
-      this._flashBtn.textContent = "⚡";
+      this._flashBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+        '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
       this._flashBtn.title = "Toggle flash";
       this._flashBtn.setAttribute("aria-pressed", "false");
       this._flashBtn.onclick = () => this.setTorch(!this.torchOn).catch(() => {});
       overlay.appendChild(this._flashBtn);
       // Torch capability is only known once the stream is live.
-      if (this.torchSupported) this._flashBtn.style.display = "block";
+      if (this.torchSupported) this._flashBtn.style.display = "flex";
     }
     parent.appendChild(overlay);
     this._overlay = overlay;

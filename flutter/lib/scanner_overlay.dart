@@ -118,15 +118,15 @@ class _ScannerOverlayState extends State<ScannerOverlay>
               top: 10,
               right: 10,
               child: Material(
-                color: widget.flashOn
-                    ? Colors.white.withValues(alpha: 0.92)
-                    : Colors.black.withValues(alpha: 0.45),
+                color: Colors.black,
                 shape: const CircleBorder(),
                 child: IconButton(
                   icon: Icon(
-                    widget.flashOn ? Icons.flash_on : Icons.flash_off,
-                    color: widget.flashOn ? Colors.black87 : Colors.white,
-                    size: 20,
+                    Icons.bolt,
+                    color: widget.flashOn
+                        ? const Color(0xFFFFD60A)
+                        : Colors.white,
+                    size: 22,
                   ),
                   onPressed: widget.onToggleFlash,
                   tooltip: 'Toggle flash',

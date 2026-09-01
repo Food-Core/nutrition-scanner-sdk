@@ -66,10 +66,9 @@ public final class ScannerOverlayView: UIView {
         statusLabel.layer.shadowRadius = 4
         addSubview(statusLabel)
 
-        flashButton.setTitle("⚡", for: .normal)
-        flashButton.titleLabel?.font = .systemFont(ofSize: 19)
+        flashButton.setImage(UIImage(systemName: "bolt.fill"), for: .normal)
         flashButton.tintColor = .white
-        flashButton.backgroundColor = UIColor.black.withAlphaComponent(0.45)
+        flashButton.backgroundColor = .black
         flashButton.layer.cornerRadius = 21
         flashButton.accessibilityLabel = "Toggle flash"
         flashButton.addTarget(self, action: #selector(flashTapped), for: .touchUpInside)
@@ -102,10 +101,9 @@ public final class ScannerOverlayView: UIView {
 
     @objc private func flashTapped() {
         flashOn.toggle()
-        flashButton.backgroundColor = flashOn
-            ? UIColor.white.withAlphaComponent(0.92)
-            : UIColor.black.withAlphaComponent(0.45)
-        flashButton.tintColor = flashOn ? .black : .white
+        flashButton.tintColor = flashOn
+            ? UIColor(red: 1, green: 0.84, blue: 0.04, alpha: 1)
+            : .white
         if let onToggleFlash {
             onToggleFlash(flashOn)
         } else {

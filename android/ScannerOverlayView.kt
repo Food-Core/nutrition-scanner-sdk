@@ -66,17 +66,17 @@ class ScannerOverlayView @JvmOverloads constructor(
         setShadowLayer(4f, 0f, 1f, Color.argb(217, 0, 0, 0))
     }
     private val flashButton = ImageButton(context).apply {
-        setImageResource(android.R.drawable.ic_menu_camera) // replace with a flash icon in your app
+        // Drop nls_flash_bolt.xml (in this SDK directory) into res/drawable.
+        setImageResource(R.drawable.nls_flash_bolt)
+        setColorFilter(Color.WHITE)
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(Color.argb(115, 0, 0, 0))
+            setColor(Color.BLACK)
         }
         contentDescription = "Toggle flash"
         setOnClickListener {
             flashOn = !flashOn
-            (background as GradientDrawable).setColor(
-                if (flashOn) Color.argb(235, 255, 255, 255) else Color.argb(115, 0, 0, 0)
-            )
+            setColorFilter(if (flashOn) Color.parseColor("#FFD60A") else Color.WHITE)
             onToggleFlash?.invoke(flashOn)
         }
     }

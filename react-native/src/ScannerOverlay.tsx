@@ -22,6 +22,8 @@ export interface ScannerOverlayProps {
   showFlash?: boolean;
   flashOn?: boolean;
   onToggleFlash?: () => void;
+  /** Override the default bolt glyph with your own icon component. */
+  flashIcon?: React.ReactNode;
 }
 
 export function ScannerOverlay({
@@ -33,6 +35,7 @@ export function ScannerOverlay({
   showFlash = true,
   flashOn = false,
   onToggleFlash,
+  flashIcon,
 }: ScannerOverlayProps) {
   const progress = useRef(new Animated.Value(0)).current;
   const [height, setHeight] = useState(0);
@@ -78,12 +81,17 @@ export function ScannerOverlay({
       ) : null}
       {showFlash && onToggleFlash && (
         <Pressable
-          style={[styles.flash, flashOn && styles.flashOn]}
+          style={styles.flash}
           onPress={onToggleFlash}
           accessibilityRole="button"
           accessibilityLabel="Toggle flash"
         >
-          <Text style={[styles.flashIcon, flashOn && styles.flashIconOn]}>⚡</Text>
+          {flashIcon ?? (
+            // \uFE0E forces the monochrome (text) bolt glyph, tinted white.
+            <Text style={[styles.flashIcon, flashOn && styles.flashIconOn]}>
+              {"\u26A1\uFE0E"}
+            </Text>
+          )}
         </Pressable>
       )}
     </View>
@@ -131,11 +139,10 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
   },
-  flashOn: { backgroundColor: "rgba(255,255,255,0.92)" },
-  flashIcon: { color: "#fff", fontSize: 19 },
-  flashIconOn: { color: "#111" },
+  flashIcon: { color: "#fff", fontSize: 18 },
+  flashIconOn: { color: "#FFD60A" },
 });
