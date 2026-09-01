@@ -5,11 +5,15 @@
  *   const scanner = new NutritionScanner({ apiKey: "nls_..." });
  *   const result = await scanner.scan(fileOrBlob);
  *
- * Auto capture (stability-gated, one API call per good hold):
+ * Auto capture with built-in viewfinder UI (corner brackets, animated scan
+ * line + "Analyzing label…" while scanning, flash toggle):
  *   const auto = new AutoCapture(videoElement, scanner, {
  *     onStatus: (msg) => ...,
+ *     onCapture: (blob) => ...,       // freeze your UI on the captured still
+ *     onResume: () => ...,            // live feed resumes for another attempt
  *     onResult: (result, blob) => ...,
  *     onError: (err) => ...,
+ *     ui: { enabled: true, flashButton: true, analyzingText: "Analyzing label…" },
  *   });
  *   await auto.start();  // opens the camera and begins watching
  *   auto.stop();
@@ -21,8 +25,10 @@ export class NutritionScanner {
   /**
    * @param {Object} options
    * @param {string} [options.apiKey]  Platform API key (nls_…).
-   * @param {() => Promise<string>} [options.getToken]  Alternative: returns a
-   *        Firebase ID token of a signed-in, email-verified user.
+   * @param {(forceRefresh: boolean) => Promise<string>} [options.getToken]
+   *        Alternative: returns a Firebase ID token of a signed-in,
+   *        email-verified user. Called with `true` when the SDK retries a
+   *        401/403 (stale claims) — pass it through to getIdToken(force).
    * @param {string} [options.baseUrl]
    */
   constructor({ apiKey, getToken, baseUrl = DEFAULT_BASE_URL } = {}) {
@@ -32,26 +38,33 @@ export class NutritionScanner {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
-  async _headers() {
+  async _headers(forceRefresh = false) {
     if (this.apiKey) return { "X-API-Key": this.apiKey };
-    return { Authorization: `Bearer ${await this.getToken()}` };
+    return { Authorization: `Bearer ${await this.getToken(forceRefresh)}` };
   }
 
   /**
    * Scan one image. Re-encodes to JPEG ≤2000px when the browser can decode it
    * (bakes EXIF rotation, shrinks upload); otherwise sends original bytes.
+   * Retries once with a force-refreshed token on 401/403 (stale user claims).
    * @param {Blob|File} image
    * @returns {Promise<{entities: Array, nutriments: Object, words_detected: number}>}
    */
   async scan(image) {
     const blob = await normalizeImage(image);
-    const form = new FormData();
-    form.append("image", blob, "label.jpg");
-    const response = await fetch(`${this.baseUrl}/extract`, {
-      method: "POST",
-      headers: await this._headers(),
-      body: form,
-    });
+    const post = async (forceRefresh) => {
+      const form = new FormData();
+      form.append("image", blob, "label.jpg");
+      return fetch(`${this.baseUrl}/extract`, {
+        method: "POST",
+        headers: await this._headers(forceRefresh),
+        body: form,
+      });
+    };
+    let response = await post(false);
+    if ((response.status === 401 || response.status === 403) && this.getToken) {
+      response = await post(true);
+    }
     if (!response.ok) {
       const detail = (await response.json().catch(() => ({}))).detail;
       throw new ScanError(response.status, detail || `HTTP ${response.status}`);
@@ -84,7 +97,7 @@ export async function normalizeImage(blob, maxWidth = 2000, quality = 0.87) {
   }
 }
 
-/** Defaults follow the shared auto-capture spec in sdk/README.md. */
+/** Defaults follow the shared auto-capture spec in the repo README. */
 export const AUTO_DEFAULTS = {
   settleMs: 1000, // camera warm-up before sampling starts
   sampleMs: 250, // sampling interval
@@ -97,11 +110,47 @@ export const AUTO_DEFAULTS = {
   captureWidth: 1600, // long side of the captured JPEG
 };
 
+/** Viewfinder UI defaults — set `ui: { enabled: false }` to render nothing. */
+export const UI_DEFAULTS = {
+  enabled: true, // master switch for the built-in overlay
+  brackets: true, // corner-bracket framing box
+  scanLine: true, // animated line while analyzing
+  statusText: true, // status messages inside the viewfinder
+  flashButton: true, // torch toggle (shown only when the device supports it)
+  analyzingText: "Analyzing label…",
+};
+
+const OVERLAY_STYLE_ID = "nls-overlay-style";
+const OVERLAY_CSS = `
+.nls-overlay{position:absolute;inset:0;pointer-events:none;z-index:5;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+.nls-corner{position:absolute;width:min(36px,10%);height:min(36px,10%);
+  border:0 solid rgba(255,255,255,.92);border-radius:2px;}
+.nls-tl{top:6%;left:6%;border-top-width:3px;border-left-width:3px;}
+.nls-tr{top:6%;right:6%;border-top-width:3px;border-right-width:3px;}
+.nls-bl{bottom:6%;left:6%;border-bottom-width:3px;border-left-width:3px;}
+.nls-br{bottom:6%;right:6%;border-bottom-width:3px;border-right-width:3px;}
+.nls-scanline{position:absolute;left:8%;right:8%;height:2px;top:8%;display:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.95),transparent);
+  box-shadow:0 0 8px rgba(255,255,255,.7);
+  animation:nls-scan 2.2s ease-in-out infinite alternate;}
+@keyframes nls-scan{from{top:8%}to{top:calc(92% - 2px)}}
+.nls-status{position:absolute;bottom:4%;left:4%;right:4%;text-align:center;
+  color:#fff;font-size:15px;line-height:1.35;
+  text-shadow:0 1px 4px rgba(0,0,0,.85);}
+.nls-flash{position:absolute;top:10px;right:10px;pointer-events:auto;
+  width:42px;height:42px;border:none;border-radius:50%;cursor:pointer;
+  background:rgba(0,0,0,.45);color:#fff;font-size:19px;display:none;}
+.nls-flash[aria-pressed="true"]{background:rgba(255,255,255,.92);color:#111;}
+`;
+
 export class AutoCapture {
   /**
    * @param {HTMLVideoElement} video  Element to attach the camera stream to.
+   *        The overlay mounts on video.parentElement (made position:relative).
    * @param {NutritionScanner} scanner
-   * @param {Object} callbacks  { onStatus, onResult, onError } + option overrides.
+   * @param {Object} callbacks  { onStatus, onCapture, onResume, onResult,
+   *        onError, ui } + threshold overrides (see AUTO_DEFAULTS).
    */
   constructor(
     video,
@@ -115,6 +164,7 @@ export class AutoCapture {
       onCapture = () => {},
       /** Fires when the live feed should resume after an empty result. */
       onResume = () => {},
+      ui = {},
       ...options
     } = {}
   ) {
@@ -125,6 +175,7 @@ export class AutoCapture {
     this.onError = onError;
     this.onCapture = onCapture;
     this.onResume = onResume;
+    this.ui = { ...UI_DEFAULTS, ...ui };
     this.options = { ...AUTO_DEFAULTS, ...options };
     this._reset();
   }
@@ -138,6 +189,7 @@ export class AutoCapture {
     this.armed = true;
     this.busy = false;
     this.motionHistory = [];
+    this.torchOn = false;
   }
 
   /** Opens the rear camera and starts watching for a steady, sharp frame. */
@@ -148,7 +200,8 @@ export class AutoCapture {
     });
     this.video.srcObject = this.stream;
     await this.video.play().catch(() => {});
-    this.onStatus("Point the camera at the nutrition table…");
+    if (this.ui.enabled) this._mountOverlay();
+    this._status("Point the camera at the nutrition table…");
     setTimeout(() => {
       if (this.stream) this.timer = setInterval(() => this._tick(), this.options.sampleMs);
     }, this.options.settleMs);
@@ -156,9 +209,102 @@ export class AutoCapture {
 
   stop() {
     clearInterval(this.timer);
+    if (this.torchOn) this.setTorch(false).catch(() => {});
     this.stream?.getTracks().forEach((t) => t.stop());
+    this._unmountOverlay();
     this._reset();
   }
+
+  /** Manual shutter: returns one full-res JPEG Blob without scanning it. */
+  async captureFrame(maxWidth = this.options.captureWidth) {
+    if (!this.video.videoWidth) return null;
+    const scale = Math.min(1, maxWidth / this.video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(this.video.videoWidth * scale);
+    canvas.height = Math.round(this.video.videoHeight * scale);
+    canvas.getContext("2d").drawImage(this.video, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.87));
+  }
+
+  /** True when the device camera supports a torch (mostly Android Chrome). */
+  get torchSupported() {
+    const track = this.stream?.getVideoTracks()[0];
+    return Boolean(track?.getCapabilities?.().torch);
+  }
+
+  async setTorch(on) {
+    const track = this.stream?.getVideoTracks()[0];
+    if (!track) return;
+    await track.applyConstraints({ advanced: [{ torch: on }] });
+    this.torchOn = on;
+    if (this._flashBtn) this._flashBtn.setAttribute("aria-pressed", String(on));
+  }
+
+  // ---------- overlay ----------
+
+  _mountOverlay() {
+    if (!document.getElementById(OVERLAY_STYLE_ID)) {
+      const style = document.createElement("style");
+      style.id = OVERLAY_STYLE_ID;
+      style.textContent = OVERLAY_CSS;
+      document.head.appendChild(style);
+    }
+    const parent = this.video.parentElement;
+    if (!parent) return;
+    if (getComputedStyle(parent).position === "static") {
+      parent.style.position = "relative";
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "nls-overlay";
+    if (this.ui.brackets) {
+      for (const corner of ["tl", "tr", "bl", "br"]) {
+        const el = document.createElement("div");
+        el.className = `nls-corner nls-${corner}`;
+        overlay.appendChild(el);
+      }
+    }
+    if (this.ui.scanLine) {
+      this._scanline = document.createElement("div");
+      this._scanline.className = "nls-scanline";
+      overlay.appendChild(this._scanline);
+    }
+    if (this.ui.statusText) {
+      this._statusEl = document.createElement("div");
+      this._statusEl.className = "nls-status";
+      overlay.appendChild(this._statusEl);
+    }
+    if (this.ui.flashButton) {
+      this._flashBtn = document.createElement("button");
+      this._flashBtn.className = "nls-flash";
+      this._flashBtn.type = "button";
+      this._flashBtn.textContent = "⚡";
+      this._flashBtn.title = "Toggle flash";
+      this._flashBtn.setAttribute("aria-pressed", "false");
+      this._flashBtn.onclick = () => this.setTorch(!this.torchOn).catch(() => {});
+      overlay.appendChild(this._flashBtn);
+      // Torch capability is only known once the stream is live.
+      if (this.torchSupported) this._flashBtn.style.display = "block";
+    }
+    parent.appendChild(overlay);
+    this._overlay = overlay;
+  }
+
+  _unmountOverlay() {
+    this._overlay?.remove();
+    this._overlay = this._scanline = this._statusEl = this._flashBtn = null;
+  }
+
+  _status(message) {
+    if (this._statusEl) this._statusEl.textContent = message;
+    this.onStatus(message);
+  }
+
+  _setAnalyzing(on) {
+    if (this._scanline) this._scanline.style.display = on ? "block" : "none";
+    if (on) this._status(this.ui.analyzingText);
+  }
+
+  // ---------- detection loop ----------
 
   _sample() {
     const w = 64, h = 48;
@@ -208,13 +354,13 @@ export class AutoCapture {
     if (!this.armed) {
       if (motion > motionRearm && this.attempts < maxAttempts) {
         this.armed = true;
-        this.onStatus("Hold steady over the nutrition table…");
+        this._status("Hold steady over the nutrition table…");
       }
       return;
     }
     if (motion >= stillBar) {
       this.stillCount = 0;
-      this.onStatus("Hold the phone still…");
+      this._status("Hold the phone still…");
       return;
     }
     let sharp = 0, n = 0;
@@ -228,11 +374,11 @@ export class AutoCapture {
     }
     if (sharp / n < sharpnessMin) {
       this.stillCount = 0;
-      this.onStatus("Too blurry — move a little closer or improve the light…");
+      this._status("Too blurry — move a little closer or improve the light…");
       return;
     }
     this.stillCount++;
-    this.onStatus("Hold steady…");
+    this._status("Hold steady…");
     if (this.stillCount >= stableSamples) this._capture();
   }
 
@@ -241,15 +387,12 @@ export class AutoCapture {
     this.attempts++;
     this.stillCount = 0;
     try {
-      const scale = Math.min(1, this.options.captureWidth / this.video.videoWidth);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(this.video.videoWidth * scale);
-      canvas.height = Math.round(this.video.videoHeight * scale);
-      canvas.getContext("2d").drawImage(this.video, 0, 0, canvas.width, canvas.height);
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.87));
+      const blob = await this.captureFrame();
+      if (!blob) return;
       this.onCapture(blob); // freeze the UI on the captured still
-      this.onStatus("Captured — scanning…");
+      this._setAnalyzing(true);
       const result = await this.scanner.scan(blob);
+      this._setAnalyzing(false);
       if ((result.entities || []).length > 0) {
         this.onResult(result, blob);
         this.stop();
@@ -257,14 +400,16 @@ export class AutoCapture {
       }
       this.armed = false;
       this.onResume(); // show the live feed again for another attempt
-      this.onStatus(
+      this._status(
         this.attempts >= this.options.maxAttempts
           ? "No nutrition table found — capture manually."
           : "No nutrition table found — aim at the label, then hold steady."
       );
     } catch (err) {
+      this._setAnalyzing(false);
       this.armed = false;
       this.onResume();
+      this._status("Scan failed — reposition to retry, or capture manually.");
       this.onError(err);
     } finally {
       this.busy = false;
