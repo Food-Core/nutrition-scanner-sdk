@@ -71,6 +71,27 @@ is adaptive (`motionStable = 10` floor, `motionCeil = 25` cap — see the
 `sampleEvery = 0.25`. Recommended UX: freeze the preview on the captured
 photo while scanning so the user knows they can move.
 
+## Viewfinder overlay
+
+`ScannerOverlayView` draws the standard scanner chrome over your preview
+layer: corner brackets, an animated scan line + **"Analyzing label…"** while
+a scan runs, status text, and a flash button (toggles the torch by default,
+or assign `onToggleFlash`). All configurable; `showsBrackets` /
+`showsFlashButton` / `analyzingText` properties, `isHidden = true` hides all.
+
+```swift
+let overlay = ScannerOverlayView(frame: previewContainer.bounds)
+overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+previewContainer.addSubview(overlay)
+
+auto.onStatus = { msg in DispatchQueue.main.async { overlay.setStatus(msg) } }
+auto.onTrigger = { [weak self] in
+    DispatchQueue.main.async { overlay.setAnalyzing(true) }
+    self?.photoOutput.capturePhoto(with: AVCapturePhotoSettings(), delegate: self!)
+    // after client.scan(...) completes: overlay.setAnalyzing(false)
+}
+```
+
 ## Auth & security
 
 `apiKey:` or `tokenProvider:` (async Firebase ID token). Read

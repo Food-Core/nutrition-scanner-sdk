@@ -73,6 +73,32 @@ All thresholds can be overridden via the options object: `settleMs`,
 (adaptive cap), `motionRearm`, `sharpnessMin`, `maxAttempts`,
 `captureWidth` — defaults in `AUTO_DEFAULTS` match the production web app.
 
+## Viewfinder overlay
+
+`AutoCapture` ships a built-in overlay: corner brackets framing the shot, an
+animated horizontal scan line with **"Analyzing label…"** while the scan is
+in flight, in-frame status text, and a **flash toggle** (rendered only when
+the device camera supports torch — Android Chrome mostly; iOS Safari doesn't
+expose it). It mounts on the video's parent element.
+
+```js
+new AutoCapture(video, scanner, {
+  ui: {
+    enabled: true,        // false = render nothing
+    brackets: true,
+    scanLine: true,
+    statusText: true,
+    flashButton: true,    // hidden automatically when unsupported
+    analyzingText: "Analyzing label…",
+  },
+  ...
+});
+```
+
+Manual torch control is also available: `auto.torchSupported` and
+`await auto.setTorch(true|false)`. `auto.captureFrame()` gives a manual
+shutter (returns a JPEG Blob without scanning).
+
 ## API reference
 
 | Export | Description |
@@ -83,6 +109,8 @@ All thresholds can be overridden via the options object: `settleMs`,
 | `auto.start() / auto.stop()` | Camera lifecycle |
 | `ScanError` | Error with `.status` |
 | `normalizeImage(blob, maxWidth?, quality?)` | Standalone JPEG re-encoder |
-| `AUTO_DEFAULTS` | The spec's default thresholds |
+| `AUTO_DEFAULTS` / `UI_DEFAULTS` | Default thresholds / overlay options |
+| `auto.captureFrame(maxWidth?)` | Manual shutter → JPEG Blob |
+| `auto.torchSupported` / `auto.setTorch(on)` | Flash control |
 
 Camera access requires HTTPS (or localhost) and a user-granted permission.

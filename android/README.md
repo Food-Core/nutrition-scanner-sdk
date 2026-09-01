@@ -82,6 +82,28 @@ the [spec](../README.md#auto-capture-algorithm)), plus `sharpnessMin = 8.0`,
 `settleMs = 1000`, `sampleEveryMs = 250`. Recommended UX: freeze the preview
 on the captured photo while scanning so the user knows they can move.
 
+## Viewfinder overlay
+
+`ScannerOverlayView` draws the standard scanner chrome over your CameraX
+`PreviewView` (add both to a `FrameLayout`): corner brackets, an animated
+scan line + **"Analyzing label…"** while a scan runs, status text, and a
+flash button. All configurable; `visibility = GONE` hides everything.
+
+```kotlin
+overlay.showBrackets = true          // or false
+overlay.showFlashButton = true       // or false
+overlay.analyzingText = "Analyzing label…"
+overlay.onToggleFlash = { on -> camera.cameraControl.enableTorch(on) }
+
+analyzer = AutoCaptureAnalyzer(
+    onStatus = { msg -> runOnUiThread { overlay.setStatus(msg) } },
+    onTrigger = {
+        runOnUiThread { overlay.setAnalyzing(true) }
+        // takePicture -> client.scan(...) -> overlay.setAnalyzing(false)
+    },
+)
+```
+
 ## Auth & security
 
 `apiKey =` or `tokenProvider =` (returns a Firebase ID token). Read

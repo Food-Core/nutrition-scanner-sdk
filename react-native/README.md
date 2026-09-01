@@ -77,6 +77,33 @@ function ScanScreen() {
 | `settleMs` | 1000 | Grace period after start |
 | `maxAttempts` | 6 | Attempts per session before giving up |
 
+## Viewfinder overlay
+
+`ScannerOverlay` renders the standard scanner chrome over your camera view:
+corner brackets, an animated scan line + **"Analyzing label…"** while a scan
+runs, status text, and a flash button. Everything is a prop; `visible={false}`
+renders nothing.
+
+```tsx
+import { ScannerOverlay } from "@food-core/nutrition-scanner/src/ScannerOverlay";
+
+const [analyzing, setAnalyzing] = useState(false);
+const [flashOn, setFlashOn] = useState(false);
+
+<View style={{ flex: 1 }}>
+  <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} enableTorch={flashOn} />
+  <ScannerOverlay
+    analyzing={analyzing}
+    status={status}
+    flashOn={flashOn}
+    onToggleFlash={() => setFlashOn((v) => !v)}
+    // brackets / showFlash / analyzingText / visible are all configurable
+  />
+</View>
+```
+
+Set `analyzing={true}` while your `takePicture → scanUri` call is in flight.
+
 ## Auth & security
 
 `{ apiKey }` or `{ getToken }` (Firebase ID token) — see

@@ -157,6 +157,7 @@ Every SDK exposes these as constructor options / parameters:
 | `sharpnessMin` | 8 | Minimum sharpness (edge energy) |
 | `maxAttempts` | 6 | Scans per session before giving up |
 | callbacks | — | `onStatus`, `onResult`/`onTrigger`, `onError`; web also `onCapture`/`onResume` for freeze-frame UX |
+| `ui` / overlay | shown | Viewfinder overlay: corner brackets, animated scan line + "Analyzing label…" while scanning, in-frame status, flash toggle. Every element toggleable; hide entirely (`ui.enabled=false` on web, `visible=false` / `isHidden` on mobile); analyzing text customizable |
 
 (React Native uses accelerometer equivalents: `jitterThreshold`/`jitterCeil`
 in g instead of motion values, `stableMs` instead of `stableSamples`.)

@@ -74,6 +74,32 @@ bar is adaptive (`motionStable = 10` floor, `motionCeil = 25` cap — see the
 `sampleEvery`. Recommended UX: freeze the preview on the captured photo
 while scanning so the user knows they can move.
 
+## Viewfinder overlay
+
+`ScannerOverlay` (in `lib/scanner_overlay.dart`) stacks the standard scanner
+chrome over your `CameraPreview`: corner brackets, an animated scan line +
+**"Analyzing label…"** while a scan runs, status text, and a flash button.
+Everything is a constructor flag; `visible: false` renders nothing.
+
+```dart
+Stack(children: [
+  CameraPreview(controller),
+  ScannerOverlay(
+    analyzing: analyzing,
+    status: status,
+    flashOn: flashOn,
+    onToggleFlash: () async {
+      flashOn = !flashOn;
+      await controller.setFlashMode(flashOn ? FlashMode.torch : FlashMode.off);
+      setState(() {});
+    },
+    // brackets / showFlash / analyzingText / visible are all configurable
+  ),
+]);
+```
+
+Set `analyzing: true` while your `takePicture → scanFile` call is in flight.
+
 ## Auth & security
 
 `apiKey:` or `getToken:` (async Firebase ID token). Read
