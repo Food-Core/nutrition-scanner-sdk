@@ -68,10 +68,18 @@ Freeze-frame UX (recommended): use `onCapture(blob)` to swap the live video
 for the captured still (the user knows they can move), and `onResume()` to
 show the video again when another attempt is needed.
 
+Auto-capture also **crops uploads to the text-dense region** (same
+stroke-transition analysis as the text gate, at higher resolution) — the
+label is sent at full resolution instead of label-plus-background, improving
+OCR digit accuracy. Disable with `cropToText: false`. Browsers have no
+on-device text recognizer, so keyword verification (available in the mobile
+SDKs) does not apply on web.
+
 All thresholds can be overridden via the options object: `settleMs`,
 `sampleMs`, `stableSamples`, `motionStable` (adaptive floor), `motionCeil`
 (adaptive cap), `motionRearm`, `sharpnessMin`, `maxAttempts`,
-`captureWidth` — defaults in `AUTO_DEFAULTS` match the production web app.
+`cropToText`, `captureWidth` — defaults in `AUTO_DEFAULTS` match the
+production web app.
 
 ## Viewfinder overlay
 

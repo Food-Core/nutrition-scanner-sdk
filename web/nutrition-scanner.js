@@ -119,6 +119,7 @@ export const AUTO_DEFAULTS = {
   textCrossings: 6, // gradient sign-flips per row to count as a text row
   textEdge: 16, // minimum gradient magnitude for a flip to count
   maxAttempts: 6, // scans per session before giving up
+  cropToText: true, // upload only the text-dense region (better OCR accuracy)
   captureWidth: 1600, // long side of the captured JPEG
   debug: false, // append [m/s/t] metrics to every status message (tuning)
 };
@@ -229,15 +230,94 @@ export class AutoCapture {
     this._reset();
   }
 
-  /** Manual shutter: returns one full-res JPEG Blob without scanning it. */
-  async captureFrame(maxWidth = this.options.captureWidth) {
+  /** Manual shutter: returns one full-res JPEG Blob without scanning it.
+   *  Pass a {sx, sy, sw, sh} rect (video pixels) to capture a sub-region. */
+  async captureFrame(maxWidth = this.options.captureWidth, rect = null) {
     if (!this.video.videoWidth) return null;
-    const scale = Math.min(1, maxWidth / this.video.videoWidth);
+    const sx = rect ? rect.sx : 0;
+    const sy = rect ? rect.sy : 0;
+    const sw = rect ? rect.sw : this.video.videoWidth;
+    const sh = rect ? rect.sh : this.video.videoHeight;
+    const scale = Math.min(1, maxWidth / sw);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(this.video.videoWidth * scale);
-    canvas.height = Math.round(this.video.videoHeight * scale);
-    canvas.getContext("2d").drawImage(this.video, 0, 0, canvas.width, canvas.height);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
+    canvas
+      .getContext("2d")
+      .drawImage(this.video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.87));
+  }
+
+  /** Locate the text-dense region of the current frame (video pixels), or
+   *  null when text spans the frame / there is too little of it. Same
+   *  stroke-transition analysis as the text gate, at higher resolution. */
+  _textCropRect() {
+    const w = 128, h = 96;
+    const video = this.video;
+    if (!video.videoWidth) return null;
+    const canvas = (this._cropCanvas ??= document.createElement("canvas"));
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, w, h);
+    const rgba = ctx.getImageData(0, 0, w, h).data;
+    const luma = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      luma[i] = 0.299 * rgba[4 * i] + 0.587 * rgba[4 * i + 1] + 0.114 * rgba[4 * i + 2];
+    }
+    const edge = this.options.textEdge;
+    // Thresholds scale with the doubled sample resolution.
+    const rowBar = this.options.textCrossings * 2;
+    const strong = new Uint8Array(w * h);
+    const textyRow = new Uint8Array(h);
+    let textyCount = 0;
+    for (let y = 0; y < h; y++) {
+      let crossings = 0, prevSign = 0;
+      for (let x = 0; x < w - 1; x++) {
+        const i = y * w + x;
+        const dx = luma[i + 1] - luma[i];
+        if (Math.abs(dx) >= edge) {
+          strong[i] = 1;
+          const sign = dx > 0 ? 1 : -1;
+          if (prevSign !== 0 && sign !== prevSign) crossings++;
+          prevSign = sign;
+        }
+      }
+      if (crossings >= rowBar) {
+        textyRow[y] = 1;
+        textyCount++;
+      }
+    }
+    if (textyCount < this.options.textRowsMin * 2) return null;
+    let y0 = 0, y1 = h - 1;
+    while (y0 < h && !textyRow[y0]) y0++;
+    while (y1 > y0 && !textyRow[y1]) y1--;
+    // Column bounds: strokes within the texty band.
+    const colBar = Math.max(2, Math.round((y1 - y0) * 0.06));
+    let x0 = -1, x1 = -1;
+    for (let x = 0; x < w; x++) {
+      let hits = 0;
+      for (let y = y0; y <= y1; y++) hits += strong[y * w + x];
+      if (hits >= colBar) {
+        if (x0 === -1) x0 = x;
+        x1 = x;
+      }
+    }
+    if (x0 === -1 || x1 <= x0) return null;
+    // Margin, map to video pixels, sanity-check the area.
+    const mx = w * 0.06, my = h * 0.06;
+    const fx0 = Math.max(0, x0 - mx) / w;
+    const fy0 = Math.max(0, y0 - my) / h;
+    const fx1 = Math.min(w, x1 + 1 + mx) / w;
+    const fy1 = Math.min(h, y1 + 1 + my) / h;
+    const area = (fx1 - fx0) * (fy1 - fy0);
+    if (area > 0.9 || area < 0.12) return null;
+    return {
+      sx: Math.round(fx0 * video.videoWidth),
+      sy: Math.round(fy0 * video.videoHeight),
+      sw: Math.round((fx1 - fx0) * video.videoWidth),
+      sh: Math.round((fy1 - fy0) * video.videoHeight),
+    };
   }
 
   /** True when the device camera supports a torch (mostly Android Chrome). */
@@ -427,7 +507,13 @@ export class AutoCapture {
     this.attempts++;
     this.stillCount = 0;
     try {
-      const blob = await this.captureFrame();
+      let rect = null;
+      if (this.options.cropToText) {
+        try {
+          rect = this._textCropRect();
+        } catch {}
+      }
+      const blob = await this.captureFrame(this.options.captureWidth, rect);
       if (!blob) return;
       this.onCapture(blob); // freeze the UI on the captured still
       this._setAnalyzing(true);

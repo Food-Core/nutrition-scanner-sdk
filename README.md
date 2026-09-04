@@ -155,7 +155,21 @@ All camera SDKs implement this spec:
    force-capture on a timer — users find surprise captures worse than
    waiting (validated in testing).
 
-Sampling stays on-device and costs nothing; only step 5 hits the API.
+Sampling stays on-device and costs nothing; only the final capture hits
+the API.
+
+### Smart capture (accuracy boosters)
+
+- **Auto-crop to the label** before upload: web crops via text-density
+  analysis; Flutter crops via on-device ML Kit text boxes. The label uploads
+  at full resolution → measurably fewer OCR digit misreads and higher cache
+  hit rates. On by default (`cropToText` / `cropToLabel`).
+- **Nutrition-keyword verification** (Flutter, on-device ML Kit): a captured
+  photo without nutrient words is rejected client-side — no API call spent —
+  and the user is told to aim at the label. On by default
+  (`requireNutritionText`); keyword list is multi-language and overridable.
+  iOS/Android native SDKs can adopt the same pattern with Vision/ML Kit;
+  web browsers have no on-device recognizer.
 
 ### Customization
 

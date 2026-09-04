@@ -2,6 +2,12 @@
   "configVersion": 2,
   "packages": [
     {
+      "name": "archive",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/archive-4.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "async",
       "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/async-2.13.1",
       "packageUri": "lib/",
@@ -56,10 +62,16 @@
       "languageVersion": "3.10"
     },
     {
+      "name": "ffi",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/ffi-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "flutter",
       "rootUri": "file:///Users/uachema/development/flutter/packages/flutter",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.11"
     },
     {
       "name": "flutter_plugin_android_lifecycle",
@@ -71,7 +83,19 @@
       "name": "flutter_web_plugins",
       "rootUri": "file:///Users/uachema/development/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.11"
+    },
+    {
+      "name": "google_mlkit_commons",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.13.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
+    },
+    {
+      "name": "google_mlkit_text_recognition",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/google_mlkit_text_recognition-0.17.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.12"
     },
     {
       "name": "http",
@@ -86,6 +110,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "image",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/image-4.9.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "material_color_utilities",
       "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/material_color_utilities-0.13.0",
       "packageUri": "lib/",
@@ -93,7 +123,7 @@
     },
     {
       "name": "meta",
-      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/meta-1.17.0",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/meta-1.19.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -110,10 +140,16 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "posix",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/posix-6.5.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "sky_engine",
       "rootUri": "file:///Users/uachema/development/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
-      "languageVersion": "3.9"
+      "languageVersion": "3.11"
     },
     {
       "name": "source_span",
@@ -147,9 +183,9 @@
     },
     {
       "name": "vector_math",
-      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/vector_math-2.2.0",
+      "rootUri": "file:///Users/uachema/.pub-cache/hosted/pub.dev/vector_math-2.4.2",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "3.10"
     },
     {
       "name": "web",
@@ -165,8 +201,8 @@
     }
   ],
   "generator": "pub",
-  "generatorVersion": "3.11.5",
+  "generatorVersion": "3.13.2",
   "flutterRoot": "file:///Users/uachema/development/flutter",
-  "flutterVersion": "3.41.9",
+  "flutterVersion": "3.47.2",
   "pubCache": "file:///Users/uachema/.pub-cache"
 }

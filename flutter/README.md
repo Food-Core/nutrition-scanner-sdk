@@ -46,6 +46,11 @@ if (result != null) {
 
 That's the entire integration. `NutritionScanner` internally handles:
 
+- **smart capture** (on-device ML Kit text recognition, offline, a few MB):
+  verifies the photo shows nutrition keywords before spending an API call,
+  and **auto-crops to the label** so it uploads at full resolution — fewer
+  OCR digit misreads and better cache hit rates
+
 - opening the back camera with the correct format, and releasing/reopening it
   when the app is backgrounded
 - **auto capture** — watches the preview and fires when the phone is steady
@@ -72,8 +77,19 @@ NutritionScanner(
   analyzingText: 'Analyzing label…',
   maxAttempts: 6,
   resolution: ResolutionPreset.high,
+  smartCapture: true,           // ML Kit verify + crop (false = skip both)
+  cropToLabel: true,            // upload the text-region crop
+  requireNutritionText: true,   // reject auto-captures without nutrient words
+  nutritionKeywords: [...],     // override the multi-language keyword list
+  tuning: AutoCaptureTuning(    // detector thresholds (see repo README)
+    textRowsMin: 8, sharpnessMin: 8, motionStable: 10, /* … */
+  ),
 )
 ```
+
+Smart capture uses `google_mlkit_text_recognition` (bundled dependency;
+Android minSdk 21, iOS 15.5+). It runs entirely on-device — no extra network
+calls or cost.
 
 ## Scanning without the camera (gallery picks, server images)
 

@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'label_check.dart';
 import 'nutrition_scanner.dart';
 
 /// A complete nutrition-label scanner in one widget.
@@ -83,6 +84,28 @@ class NutritionScanner extends StatefulWidget {
   /// quality and upload size.
   final ResolutionPreset resolution;
 
+  /// On-device label intelligence (ML Kit, offline): verify the photo shows a
+  /// nutrition label before spending an API call, and crop it to the text
+  /// region for better OCR accuracy. Disable to skip both.
+  final bool smartCapture;
+
+  /// Upload the text-region crop instead of the full frame (needs
+  /// [smartCapture]). More pixels per character → fewer OCR misreads.
+  final bool cropToLabel;
+
+  /// Reject auto-captures whose photo shows no nutrition keywords (needs
+  /// [smartCapture]) — the user is told to aim at the label instead of
+  /// wasting a scan. Manual shutter presses are never rejected.
+  final bool requireNutritionText;
+
+  /// Override the keyword list used by [requireNutritionText]
+  /// (defaults to [kDefaultNutritionKeywords], multi-language).
+  final List<String>? nutritionKeywords;
+
+  /// Detector threshold overrides (stillness/sharpness/text gate). Leave null
+  /// for the spec defaults.
+  final AutoCaptureTuning? tuning;
+
   const NutritionScanner({
     super.key,
     this.apiKey,
@@ -97,6 +120,11 @@ class NutritionScanner extends StatefulWidget {
     this.analyzingText = 'Analyzing label…',
     this.maxAttempts = 6,
     this.resolution = ResolutionPreset.high,
+    this.smartCapture = true,
+    this.cropToLabel = true,
+    this.requireNutritionText = true,
+    this.nutritionKeywords,
+    this.tuning,
   }) : assert(apiKey != null || client != null, 'Provide apiKey or client.');
 
   @override
@@ -109,11 +137,21 @@ class _NutritionScannerState extends State<NutritionScanner>
       widget.client ?? NutritionScannerClient(apiKey: widget.apiKey!);
   late final AutoCaptureDetector _detector = AutoCaptureDetector(
     maxAttempts: widget.maxAttempts,
+    stableSamples: widget.tuning?.stableSamples ?? 2,
+    motionStable: widget.tuning?.motionStable ?? 10,
+    motionCeil: widget.tuning?.motionCeil ?? 25,
+    motionRearm: widget.tuning?.motionRearm ?? 30,
+    sharpnessMin: widget.tuning?.sharpnessMin ?? 8,
+    textRowsMin: widget.tuning?.textRowsMin ?? 8,
+    textCrossings: widget.tuning?.textCrossings ?? 6,
+    textEdge: widget.tuning?.textEdge ?? 16,
     onStatus: (message) {
       if (mounted && !_done) setState(() => _status = message);
     },
     onTrigger: () => _scanPhoto(auto: true),
   );
+  late final LabelIntelligence _intel =
+      LabelIntelligence(keywords: widget.nutritionKeywords);
 
   CameraController? _camera;
   String _status = '';
@@ -134,6 +172,7 @@ class _NutritionScannerState extends State<NutritionScanner>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (widget.smartCapture) _intel.close();
     _camera?.dispose();
     super.dispose();
   }
@@ -202,7 +241,25 @@ class _NutritionScannerState extends State<NutritionScanner>
         _frozen = File(photo.path); // freeze: the user can move their hand
         _analyzing = true;
       });
-      final result = await _client.scanPath(photo.path);
+
+      // On-device intelligence: verify it's a label + crop to the text
+      // region before spending the API call.
+      var uploadPath = photo.path;
+      if (widget.smartCapture) {
+        final check =
+            await _intel.analyze(photo.path, crop: widget.cropToLabel);
+        if (!mounted) return;
+        if (auto && widget.requireNutritionText && !check.hasNutritionText) {
+          await _resumePreview();
+          _detector.rearmAfterEmptyResult();
+          setState(() => _status =
+              "That doesn't look like a nutrition label — aim at the table.");
+          return;
+        }
+        if (check.croppedFile != null) uploadPath = check.croppedFile!.path;
+      }
+
+      final result = await _client.scanPath(uploadPath);
       if (!mounted) return;
       if (result.foundTable) {
         setState(() {
@@ -299,4 +356,29 @@ class _NutritionScannerState extends State<NutritionScanner>
         ),
     ]);
   }
+}
+
+/// Threshold overrides for the auto-capture detector inside
+/// [NutritionScanner]. All values default to the shared spec; see the repo
+/// README for what each knob does.
+class AutoCaptureTuning {
+  final int stableSamples;
+  final double motionStable;
+  final double motionCeil;
+  final double motionRearm;
+  final double sharpnessMin;
+  final int textRowsMin;
+  final int textCrossings;
+  final double textEdge;
+
+  const AutoCaptureTuning({
+    this.stableSamples = 2,
+    this.motionStable = 10,
+    this.motionCeil = 25,
+    this.motionRearm = 30,
+    this.sharpnessMin = 8,
+    this.textRowsMin = 8,
+    this.textCrossings = 6,
+    this.textEdge = 16,
+  });
 }
