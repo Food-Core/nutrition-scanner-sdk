@@ -115,8 +115,12 @@ export const AUTO_DEFAULTS = {
   motionCeil: 25, // adaptive threshold never exceeds this
   motionRearm: 30, // motion above this re-arms after an empty result
   sharpnessMin: 8, // mean neighbor gradient below this = blurry
+  textRowsMin: 8, // sample rows that must look like text lines (0 disables)
+  textCrossings: 6, // gradient sign-flips per row to count as a text row
+  textEdge: 16, // minimum gradient magnitude for a flip to count
   maxAttempts: 6, // scans per session before giving up
   captureWidth: 1600, // long side of the captured JPEG
+  debug: false, // append [m/s/t] metrics to every status message (tuning)
 };
 
 /** Viewfinder UI defaults — set `ui: { enabled: false }` to render nothing. */
@@ -335,7 +339,10 @@ export class AutoCapture {
 
   _tick() {
     if (this.busy || !this.video.videoWidth) return;
-    const { motionStable, motionCeil, motionRearm, sharpnessMin, stableSamples, maxAttempts } = this.options;
+    const {
+      motionStable, motionCeil, motionRearm, sharpnessMin, stableSamples,
+      maxAttempts, textRowsMin, textCrossings, textEdge, debug,
+    } = this.options;
     const sample = this._sample();
     let motion = 255;
     if (this.prevLuma) {
@@ -370,27 +377,48 @@ export class AutoCapture {
       }
       return;
     }
-    if (motion >= stillBar) {
-      this.stillCount = 0;
-      this._status("Hold the phone still…");
-      return;
-    }
-    let sharp = 0, n = 0;
+    // Text-likeness: text lines are rows dense with alternating dark/light
+    // strokes. Count gradient sign-flips per row; enough "texty" rows means
+    // a label (not a desk, wall, or fabric) is in frame.
     const { luma, w, h } = sample;
+    let sharp = 0, n = 0, textRows = 0;
     for (let y = 0; y < h - 1; y++) {
+      let crossings = 0, prevSign = 0;
       for (let x = 0; x < w - 1; x++) {
         const i = y * w + x;
-        sharp += Math.abs(luma[i] - luma[i + 1]) + Math.abs(luma[i] - luma[i + w]);
+        const dx = luma[i + 1] - luma[i];
+        sharp += Math.abs(dx) + Math.abs(luma[i] - luma[i + w]);
         n++;
+        if (Math.abs(dx) >= textEdge) {
+          const sign = dx > 0 ? 1 : -1;
+          if (prevSign !== 0 && sign !== prevSign) crossings++;
+          prevSign = sign;
+        }
       }
+      if (crossings >= textCrossings) textRows++;
+    }
+    const debugSuffix = debug
+      ? ` [m ${motion.toFixed(1)}/${stillBar.toFixed(1)} · s ${(sharp / n).toFixed(1)}/${sharpnessMin} · t ${textRows}/${textRowsMin}]`
+      : "";
+    const say = (msg) => this._status(msg + debugSuffix);
+
+    if (motion >= stillBar) {
+      this.stillCount = 0;
+      say("Hold the phone still…");
+      return;
     }
     if (sharp / n < sharpnessMin) {
       this.stillCount = 0;
-      this._status("Too blurry — move a little closer or improve the light…");
+      say("Too blurry — move a little closer or improve the light…");
+      return;
+    }
+    if (textRowsMin > 0 && textRows < textRowsMin) {
+      this.stillCount = 0;
+      say("Point at the nutrition table…");
       return;
     }
     this.stillCount++;
-    this._status("Hold steady…");
+    say("Hold steady…");
     if (this.stillCount >= stableSamples) this._capture();
   }
 

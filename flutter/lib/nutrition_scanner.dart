@@ -316,6 +316,16 @@ class AutoCaptureDetector {
   /// Minimum sharpness (mean neighbor gradient) — below is "too blurry".
   final double sharpnessMin;
 
+  /// Sample rows that must look like text lines before capturing — prevents
+  /// firing at desks/walls the moment the hand is steady. 0 disables.
+  final int textRowsMin;
+
+  /// Gradient sign-flips per row for it to count as a text row.
+  final int textCrossings;
+
+  /// Minimum gradient magnitude for a flip to count.
+  final double textEdge;
+
   /// Attempts per session before suggesting manual capture.
   final int maxAttempts;
 
@@ -333,6 +343,9 @@ class AutoCaptureDetector {
     this.motionCeil = 25,
     this.motionRearm = 30,
     this.sharpnessMin = 8,
+    this.textRowsMin = 8,
+    this.textCrossings = 6,
+    this.textEdge = 16,
     this.maxAttempts = 6,
     this.sampleEvery = const Duration(milliseconds: 250),
     this.settle = const Duration(milliseconds: 1000),
@@ -417,17 +430,31 @@ class AutoCaptureDetector {
 
     var sharp = 0.0;
     var n = 0;
+    var textRows = 0;
     for (var y = 0; y < _h - 1; y++) {
+      var crossings = 0;
+      var prevSign = 0;
       for (var x = 0; x < _w - 1; x++) {
         final i = y * _w + x;
-        sharp += (sample[i] - sample[i + 1]).abs() +
-            (sample[i] - sample[i + _w]).abs();
+        final dx = sample[i + 1] - sample[i];
+        sharp += dx.abs() + (sample[i] - sample[i + _w]).abs();
         n++;
+        if (dx.abs() >= textEdge) {
+          final sign = dx > 0 ? 1 : -1;
+          if (prevSign != 0 && sign != prevSign) crossings++;
+          prevSign = sign;
+        }
       }
+      if (crossings >= textCrossings) textRows++;
     }
     if (sharp / n < sharpnessMin) {
       _stillCount = 0;
       onStatus?.call('Too blurry — move closer or improve the light…');
+      return;
+    }
+    if (textRowsMin > 0 && textRows < textRowsMin) {
+      _stillCount = 0;
+      onStatus?.call('Point at the nutrition table…');
       return;
     }
 

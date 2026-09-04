@@ -25,6 +25,10 @@ public final class AutoCaptureController: NSObject, AVCaptureVideoDataOutputSamp
     public var motionCeil = 25.0
     public var motionRearm = 30.0
     public var sharpnessMin = 8.0
+    /// Sample rows that must look like text lines before capturing (0 disables).
+    public var textRowsMin = 8
+    public var textCrossings = 6
+    public var textEdge: Float = 16
     public var maxAttempts = 6
     public var sampleEvery: TimeInterval = 0.25
     public var settle: TimeInterval = 1.0
@@ -111,16 +115,31 @@ public final class AutoCaptureController: NSObject, AVCaptureVideoDataOutputSamp
 
         var sharp = 0.0
         var count = 0
+        var textRows = 0
         for y in 0..<(sampleHeight - 1) {
+            var crossings = 0
+            var prevSign = 0
             for x in 0..<(sampleWidth - 1) {
                 let i = y * sampleWidth + x
-                sharp += Double(abs(sample[i] - sample[i + 1]) + abs(sample[i] - sample[i + sampleWidth]))
+                let dx = sample[i + 1] - sample[i]
+                sharp += Double(abs(dx) + abs(sample[i] - sample[i + sampleWidth]))
                 count += 1
+                if abs(dx) >= textEdge {
+                    let sign = dx > 0 ? 1 : -1
+                    if prevSign != 0 && sign != prevSign { crossings += 1 }
+                    prevSign = sign
+                }
             }
+            if crossings >= textCrossings { textRows += 1 }
         }
         if sharp / Double(count) < sharpnessMin {
             stillCount = 0
             onStatus("Too blurry — move closer or improve the light…")
+            return
+        }
+        if textRowsMin > 0 && textRows < textRowsMin {
+            stillCount = 0
+            onStatus("Point at the nutrition table…")
             return
         }
 

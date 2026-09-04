@@ -139,14 +139,19 @@ All camera SDKs implement this spec:
    counts as still when `motion < clamp(noiseFloor × 1.6, 10, 25)` where
    `noiseFloor` is the smallest recent motion. This self-calibrates to each
    device's sensor noise and focus hunting — never hard-code a fixed bar.
-5. When still **and sharpness ≥ 8** for **2 consecutive samples** → capture
+5. **Text gate**: count gradient sign-flips per sample row; a row with ≥6
+   strong flips reads as a text line. Require **≥8 text rows** before any
+   capture — a steady hand aimed at a desk or wall never fires. (The React
+   Native reference uses the accelerometer and cannot see frames, so it
+   skips this gate; use the platform's text detector there if needed.)
+6. When still, sharp, **and text is present** for **2 consecutive samples** → capture
    one full-resolution frame (≤ 2000 px JPEG) and call `/extract`. **Freeze
    the UI on the captured still** while scanning so the user knows they can
    move their hand.
-6. If the result has entities → done. If empty → resume the live preview,
+7. If the result has entities → done. If empty → resume the live preview,
    *disarm*, tell the user to reposition, and re-arm only after
    **motion > 30** (a deliberate move) followed by stillness again.
-7. Stop after **6 attempts** per session; offer manual capture. Do **not**
+8. Stop after **6 attempts** per session; offer manual capture. Do **not**
    force-capture on a timer — users find surprise captures worse than
    waiting (validated in testing).
 
@@ -165,6 +170,8 @@ Every SDK exposes these as constructor options / parameters:
 | `motionCeil` | 25 | Cap of the adaptive stillness bar |
 | `motionRearm` | 30 | Motion that re-arms after an empty result |
 | `sharpnessMin` | 8 | Minimum sharpness (edge energy) |
+| `textRowsMin` | 8 | Text rows required before capturing (0 disables the text gate) |
+| `textCrossings` / `textEdge` | 6 / 16 | What counts as a text row (flips per row / flip magnitude) |
 | `maxAttempts` | 6 | Scans per session before giving up |
 | callbacks | — | `onStatus`, `onResult`/`onTrigger`, `onError`; web also `onCapture`/`onResume` for freeze-frame UX |
 | `ui` / overlay | shown | Viewfinder overlay: corner brackets, animated scan line + "Analyzing label…" while scanning, in-frame status, flash toggle. Every element toggleable; hide entirely (`ui.enabled=false` on web, `visible=false` / `isHidden` on mobile); analyzing text customizable |

@@ -23,6 +23,10 @@ class AutoCaptureAnalyzer(
     private val motionCeil: Double = 25.0,
     private val motionRearm: Double = 30.0,
     private val sharpnessMin: Double = 8.0,
+    /** Sample rows that must look like text lines before capturing (0 disables). */
+    private val textRowsMin: Int = 8,
+    private val textCrossings: Int = 6,
+    private val textEdge: Double = 16.0,
     private val maxAttempts: Int = 6,
     private val sampleEveryMs: Long = 250,
     private val settleMs: Long = 1000,
@@ -99,16 +103,31 @@ class AutoCaptureAnalyzer(
 
             var sharp = 0.0
             var n = 0
+            var textRows = 0
             for (y in 0 until H - 1) {
+                var crossings = 0
+                var prevSign = 0
                 for (x in 0 until W - 1) {
                     val i = y * W + x
-                    sharp += abs(sample[i] - sample[i + 1]) + abs(sample[i] - sample[i + W])
+                    val dx = sample[i + 1] - sample[i]
+                    sharp += abs(dx) + abs(sample[i] - sample[i + W])
                     n++
+                    if (abs(dx) >= textEdge) {
+                        val sign = if (dx > 0) 1 else -1
+                        if (prevSign != 0 && sign != prevSign) crossings++
+                        prevSign = sign
+                    }
                 }
+                if (crossings >= textCrossings) textRows++
             }
             if (sharp / n < sharpnessMin) {
                 stillCount = 0
                 onStatus("Too blurry — move closer or improve the light…")
+                return
+            }
+            if (textRowsMin > 0 && textRows < textRowsMin) {
+                stillCount = 0
+                onStatus("Point at the nutrition table…")
                 return
             }
 
