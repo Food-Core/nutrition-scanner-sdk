@@ -56,6 +56,12 @@ class NutritionScanner extends StatefulWidget {
   /// friendly status and resumed scanning where possible.
   final void Function(Object error)? onError;
 
+  /// Optional: called when an auto-captured photo reached the API but no
+  /// nutrition table was found, after the preview has resumed and the
+  /// detector re-armed. Receives the attempt count — use it to show your own
+  /// "couldn't read the label" UI instead of the default status message.
+  final void Function(int attempts)? onNoTableFound;
+
   /// Auto-capture when the phone is steady and the image is sharp
   /// (default). When false, only the manual shutter button scans.
   final bool autoCapture;
@@ -112,6 +118,7 @@ class NutritionScanner extends StatefulWidget {
     this.client,
     required this.onResult,
     this.onError,
+    this.onNoTableFound,
     this.autoCapture = true,
     this.showOverlay = true,
     this.brackets = true,
@@ -273,6 +280,7 @@ class _NutritionScannerState extends State<NutritionScanner>
       await _resumePreview();
       if (auto) {
         _detector.rearmAfterEmptyResult();
+        widget.onNoTableFound?.call(_detector.attempts);
       } else {
         setState(() =>
             _status = 'No nutrition table found — aim at the label and retry.');
